@@ -1,42 +1,55 @@
-/*
-	main.js is primarily responsible for hooking up the UI to the rest of the application 
-	and setting up the main event loop
-*/
-
-// We will write the functions in this file in the traditional ES5 way
-// In this instance, we feel the code is more readable if written this way
-// If you want to re-write these as ES6 arrow functions, to be consistent with the other files, go ahead!
-
 import * as utils from './utils.js';
 import * as audio from './audio.js';
 import * as canvas from './canvas.js';
+import * as classes from './classes.js';
+import * as songs from './songs.js';
 let drawParams = {
   showGradient: true,
   showBars: true,
-  showCircles: true,
+  showCircles: false,
   showNoise: false,
   invertColors: false,
   showEmboss: false,
+  showBezier: true,
   numBars: 12,
-  activeNote: 0
+  activeNote: 0,
+  bezierTimer: 0
 };
+let notes = ["media/C.mp3", "media/CSharp.mp3", "media/D.mp3", "media/DSharp.mp3", 
+            "media/E.mp3", "media/F.mp3", "media/FSharp.mp3", "media/G.mp3", "media/GSharp.mp3",
+            "media/A.mp3", "media/ASharp.mp3", "media/B.mp3"];
+let gameParams = {
+  song : songs.odeToJoyNotes(), //Array of song pitches.
+  tempo: songs.odeToJoyBeats(), //Array of notes to be played
+  gameTimer: 0, //Counts frames passed since song start. Used to time notes.
+  prevNote: -1, //Used for bezier drawing.
+  newestNote: 0, //Used to keep track of notes.
+  activeNote: 0, //Used for bezier drawing.
+  defaultNoteTarget: 300, //Alter lower to make notes move slower, higher to make notes faster.
+  noteSize: 10, //Default note radius.
+  noteColor: 'rgba(0, 0, 0, 1)', //Default note color.
+  currentNotes: [], //Array of notes on screen.
+  paused: true
+};
+let canvasElement = document.querySelector("canvas"); // hookup <canvas> element
+let playButton;
 
-// 1 - here we are faking an enumeration
 const DEFAULTS = Object.freeze({
 	sound1  :  "media/C.mp3"
 });
 
 function init(){
   audio.setupWebaudio(DEFAULTS.sound1);
-	let canvasElement = document.querySelector("canvas"); // hookup <canvas> element
   setupUI(canvasElement);
   setupPiano();
   canvas.setupCanvas(canvasElement, audio.analyserNode);
+  setupCollapsible();
+  setupGame();
   loop();
 }
 
 function setupUI(canvasElement){
-  // A - hookup fullscreen button
+  //hookup fullscreen button
   const fsButton = document.querySelector("#fsButton");
 	
   // add .onclick event to button
@@ -45,50 +58,22 @@ function setupUI(canvasElement){
     utils.goFullscreen(canvasElement);
   };
 
-  /*
-  let playButton = document.querySelector("#playButton");
+  //Hook up play button.
+  playButton = document.querySelector("#playButton");
   playButton.onclick = e => {
-    if(audio.audioCtx.state == "suspended") {
-      audio.audioCtx.resume();
+    if(gameParams.paused) 
+    {
+      document.querySelector("#playButton").textContent = "Pause";
+      gameParams.paused = false;
     }
-    if(e.target.dataset.playing == "no"){
-      audio.playCurrentSound();
-      e.target.dataset.playing = "yes";
-    }
-    else{
-      audio.pauseCurrentSound();
-      e.target.dataset.playing = "no";
+    else
+    {
+      document.querySelector("#playButton").textContent = "Play";
+      gameParams.paused = true;
     }
   };
 
-  
-  //C - hookup volume slider & label
-  let volumeSlider = document.querySelector("#volumeSlider");
-  let volumeLabel = document.querySelector("#volumeLabel");
-
-  //add .oninput event to slider
-  volumeSlider.oninput = e => {
-    //set the gain
-    audio.setVolume(e.target.value);
-    //update value of label to match value of slider
-    volumeLabel.innerHTML = Math.round(e.target.value/2 * 100);
-  };
-
-  //set value of label to match initial value of slider
-  volumeSlider.dispatchEvent(new Event("input"));
-  
-
-  //D - hookup track <select>
-  let trackSelect = document.querySelector("#trackSelect");
-  //add .onchange event to <select>
-  trackSelect.onchange = e => {
-    audio.loadSoundFile(e.target.value);
-    //pause the current track if it is playing
-    if(playButton.dataset.playing = "yes"){
-      playButton.dispatchEvent(new MouseEvent("click"));
-    }
-  };*/
-
+  //Hook up checkboxes.
   let gradientCB = document.querySelector('#gradientCB');
   gradientCB.checked = drawParams.showGradient;
   let barsCB = document.querySelector('#barsCB');
@@ -101,7 +86,10 @@ function setupUI(canvasElement){
   invertCB.checked = drawParams.invertColors;
   let embossCB = document.querySelector('#embossCB');
   embossCB.checked = drawParams.showEmboss;
+  let bezierCB = document.querySelector('#bezierCB');
+  bezierCB.checked = drawParams.showBezier;
 
+  //Give checkboxes events.
   gradientCB.onchange = e => {
     drawParams.showGradient = e.target.checked;
   }
@@ -120,8 +108,10 @@ function setupUI(canvasElement){
   embossCB.onchange = e => {
     drawParams.showEmboss = e.target.checked;
   }
-
-} // end setupUI
+  bezierCB.onchange = e => {
+    drawParams.showEmboss = e.target.checked;
+  }
+}
 
 function setupPiano(){
   window.addEventListener("keydown", function (event) {
@@ -131,52 +121,52 @@ function setupPiano(){
     console.log(event.key);
     switch (event.key) { //Hook keys up to piano keys.
       case "1":
-        audio.loadSoundFile("media/C.mp3");
         drawParams.activeNote = 0;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "2":
-        audio.loadSoundFile("media/CSharp.mp3");
         drawParams.activeNote = 1;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "3":
-        audio.loadSoundFile("media/D.mp3");
         drawParams.activeNote = 2;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "4":
-        audio.loadSoundFile("media/DSharp.mp3");
         drawParams.activeNote = 3;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "5":
-        audio.loadSoundFile("media/E.mp3");
         drawParams.activeNote = 4;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "6":
-        audio.loadSoundFile("media/F.mp3");
         drawParams.activeNote = 5;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "7":
-        audio.loadSoundFile("media/FSharp.mp3");
         drawParams.activeNote = 6;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "8":
-        audio.loadSoundFile("media/G.mp3");
         drawParams.activeNote = 7;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "9":
-        audio.loadSoundFile("media/GSharp.mp3");
         drawParams.activeNote = 8;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "0":
-        audio.loadSoundFile("media/A.mp3");
         drawParams.activeNote = 9;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "-":
-        audio.loadSoundFile("media/ASharp.mp3");
         drawParams.activeNote = 10;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       case "=":
-        audio.loadSoundFile("media/B.mp3");
         drawParams.activeNote = 11;
+        audio.loadSoundFile(notes[drawParams.activeNote]);
         break;
       default:
         return; // Quit when this doesn't handle the key event.
@@ -187,34 +177,63 @@ function setupPiano(){
   }, true);
 }
 
-function loop(){
-  /* NOTE: This is temporary testing code that we will delete in Part II */
-    requestAnimationFrame(loop);
-    canvas.draw(drawParams);
-    // 1) create a byte array (values of 0-255) to hold the audio data
-    // normally, we do this once when the program starts up, NOT every frame
-    let audioData = new Uint8Array(audio.analyserNode.fftSize/2);
-    
-    // 2) populate the array of audio data *by reference* (i.e. by its address)
-    audio.analyserNode.getByteFrequencyData(audioData);
-    
-    // 3) log out the array and the average loudness (amplitude) of all of the frequency bins
-      //console.log(audioData);
-      
-      //console.log("-----Audio Stats-----");
-      let totalLoudness =  audioData.reduce((total,num) => total + num);
-      let averageLoudness =  totalLoudness/(audio.analyserNode.fftSize/2);
-      let minLoudness =  Math.min(...audioData); // ooh - the ES6 spread operator is handy!
-      let maxLoudness =  Math.max(...audioData); // ditto!
-      // Now look at loudness in a specific bin
-      // 22050 kHz divided by 128 bins = 172.23 kHz per bin
-      // the 12th element in array represents loudness at 2.067 kHz
-      let loudnessAt2K = audioData[11]; 
-      // console.log(`averageLoudness = ${averageLoudness}`);
-      // console.log(`minLoudness = ${minLoudness}`);
-      // console.log(`maxLoudness = ${maxLoudness}`);
-      // console.log(`loudnessAt2K = ${loudnessAt2K}`);
-      // console.log("---------------------");
-  }
+function setupGame(){
+  gameParams.currentNotes.push(createNote(gameParams.newestNote));
+}
 
+//Setup collapsible button at the top.
+function setupCollapsible(){
+  let coll = document.querySelector(".collapsible");
+  coll.addEventListener("click", function() {
+    this.classList.toggle("active");
+    let content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+
+function createNote(noteIndex)
+{
+  //It just works :^)
+  return new classes.Note(5 + 62 * (gameParams.song[noteIndex] + 1) + (4 * gameParams.song[noteIndex]) - 31, -200, gameParams.defaultNoteTarget, 300, gameParams.noteSize, gameParams.noteColor);
+}
+
+function loop(){
+  requestAnimationFrame(loop); //Loop game.
+  canvas.draw(drawParams, gameParams.currentNotes, gameParams.song, gameParams.activeNote); //Draw, even if game is paused.
+  if(gameParams.paused == false) //Do not run game if it is paused.
+  {
+    gameParams.gameTimer++;
+    if(gameParams.gameTimer >= gameParams.tempo[gameParams.newestNote]) //Check to see if next note is due to be created.
+    {
+      gameParams.gameTimer = 0;
+      gameParams.newestNote++;
+      gameParams.currentNotes.push(createNote(gameParams.newestNote));
+    }
+  }  
+  for(let a = 0; a < gameParams.currentNotes.length; a++)//Check through every note.
+  {
+    if(gameParams.paused == false) //Don't update positions if paused.
+    {
+      gameParams.currentNotes[a].updatePos();
+    }
+    gameParams.currentNotes[a].draw(canvasElement); //Draw note.
+    if(gameParams.currentNotes[a].noteHit) //Check for collision. Doesn't need to be in a pause check because paused notes won't be hit early, only late.
+    {
+      gameParams.currentNotes.shift();
+      gameParams.activeNote++;
+      gameParams.prevNote++;
+      drawParams.bezierTimer = 5;
+      break;
+    }
+  }
+  if(drawParams.showBezier && drawParams.bezierTimer > 0) //Draw bezier curves.
+  {
+    drawParams.bezierTimer--;
+    canvas.drawBezier(gameParams.song[gameParams.activeNote], gameParams.song[gameParams.prevNote])
+  }
+}
 export {init};

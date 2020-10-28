@@ -2,41 +2,38 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<title>Audio Visualizer</title>
+	<title>Online Piano</title>
+	<link rel="shortcut icon" href="#"> <!--Solves an error that only sometimes occurs that does not allow the audio to play. Error only occurs on localhosting.-->
 	<link href="styles/default-styles.css" type="text/css" rel="stylesheet" />
+	<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
 	<script src="./src/loader.js" type="module"></script>
 </head>
 <body>
+<header>
+	<h1>Online Piano</h1>
+    <button type="button" class="collapsible">Info/How to Play</button> <!--Collapseable text implementation from https://www.w3schools.com/howto/howto_js_collapsible.asp-->
+    <div class="content">
+      <h2>How to play</h2>
+      <p>Each bar represents a key on the piano, and is played with the top of your keyboard. Bar 1 is activated by the '1' key, with '-' and '=' being the last two notes on the scale. Once you hit play, notes will begin to come down from the top of the screen. Once the note hits the black line, press the right key to play a song!</p>
+    </div>
+</header>
 <main>
 	<canvas width="800" height="400"></canvas>
 	<div id="controls">
-		<section>
+		<section id = "buttonContainer">
+			<button id="playButton">Play</button>
 			<button id="fsButton">Full Screen</button>
-			<!--<button id="playButton" data-playing="no"></button>
-			
-		
-			<label>Track: 
-				<select id="trackSelect">
-					<option value="media/New Adventure Theme.mp3" selected>New Adventure Theme</option>
-					<option value="media/Peanuts Theme.mp3">Peanuts Theme</option>
-					<option value="media/The Picard Song.mp3">The Picard Song</option>
-				</select>
-			</label>-->
 		</section>
-		
-		<!--<section>
-			Volume: <input type="range" id="volumeSlider" min="0" max="2" value="1" step="0.01">
-			<span id="volumeLabel">???</span>
-		</section>-->
-		<section>
+		<section id="cbs">
 			<span><input type="checkbox" id="gradientCB"><label for="gradientCB">Show Gradient</label></span>
 			<span><input type="checkbox" id="barsCB"><label for="barsCB">Show Bars</label></span>
 			<span><input type="checkbox" id="circlesCB"><label for="circlesCB">Show Circles</label></span>
-			<!-- we'll use this 4th checkbox soon! -->
 			<span><input type="checkbox" id="noiseCB"><label for="noiseCB">Show Noise</label></span>
 			<span><input type="checkbox" id="invertCB"><label for="invertCB">Invert Colors</label></span>
 			<span><input type="checkbox" id="embossCB"><label for="embossCB">Show Emboss</label></span>
-		  </section>
+			<span><input type="checkbox" id="bezierCB"><label for="bezierCB">Show Bezier</label></span>
+		</section>
 	</div>
 </main>
 </body>

@@ -56,6 +56,13 @@ the amplitude of that frequency.
     sourceNode.connect(analyserNode);
     analyserNode.connect(gainNode);
     gainNode.connect(audioCtx.destination);
+
+    //Chrome autoplay fix
+    element.onplay = (e) => {
+  	  if (audioCtx.state == "suspended") {
+    	    audioCtx.resume();
+  	  }
+	};
 }
 
 function loadSoundFile(filePath){

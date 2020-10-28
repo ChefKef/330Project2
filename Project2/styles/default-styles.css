@@ -1,6 +1,20 @@
 body {
 	background: #eeeeee;
-	font-family: tahoma, verdana, sans serif;
+  
+  /*
+  background: rgb(0,0,255);
+  background: linear-gradient(0deg, rgba(0,0,255,1) 0%, rgba(222,0,255,1) 100%);
+  */
+  background: #FFEFAD;
+  
+}
+
+header{
+  font-family: 'Pacifico', cursive;
+}
+
+html{
+  min-height: 100%;
 }
 
 canvas {
@@ -8,15 +22,13 @@ canvas {
 	margin-top: 1rem;
 	margin-bottom: 1rem;
 	box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
-	background: #fafafa;
+  background: #fafafa;
+  float: left;
 }
 
 #controls{
   margin-left: 1rem;
-}
-
-#volumeLabel{
-  margin-left: 1rem;
+  
 }
 
 section{
@@ -28,15 +40,78 @@ section{
   width: 6rem;
 }
 
-button[data-playing="yes"]:after{
-  content: "Pause";
+#buttonContainer{
+  display: flex;
+  justify-content: space-around;
+}
+#buttonContainer button{
+  margin-top: 8px;
+  margin-bottom: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  width: 35%;
+  background-color: #83A8EC;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
 }
 
-button[data-playing="no"]:after{
-  content: "Play";
+#buttonContainer button:hover{
+ background-color: #2160D4;
+}
+
+button{
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: bold;
+}
+
+#cbs{
+  margin-top: 5em;
+  display: flex;
+  justify-content: space-around;
 }
 
 #fsButton{
   font-size: 1.2rem;
   width: 8rem;
 }
+
+h1{
+  text-align: center;
+  font-size: 40px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#cbs{
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.collapsible {
+  font-family: 'Pacifico', cursive;
+  background-color: rgba(0, 0, 0, 0);
+    color: #000000;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    border: none;
+    text-align: center;
+    outline: none;
+    font-size: 25px;
+    margin-bottom: 10px;
+  }
+  
+  /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+  .active, .collapsible:hover {
+    background-color: rgba(0, 0, 0, 0.1);;
+  }
+  
+  /* Style the collapsible content. Note: hidden by default */
+  .content {
+    font-family: 'Josefin Sans', sans-serif;
+    padding: 0 18px;
+    display: none;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0);
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 10px;
+  }

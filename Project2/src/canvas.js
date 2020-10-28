@@ -1,15 +1,6 @@
-/*
-	The purpose of this file is to take in the analyser node and a <canvas> element: 
-	  - the module will create a drawing context that points at the <canvas> 
-	  - it will store the reference to the analyser node
-	  - in draw(), it will loop through the data in the analyser node
-	  - and then draw something representative on the canvas
-	  - maybe a better name for this file/module would be *visualizer.js* ?
-*/
-
 import * as utils from './utils.js';
 
-let ctx,canvasWidth,canvasHeight,gradient,analyserNode,audioData;
+let ctx,canvasWidth,canvasHeight,gradient,analyserNode,audioData,topSpacing;
 
 function setupCanvas(canvasElement,analyserNodeRef){
 	// create drawing context
@@ -24,19 +15,16 @@ function setupCanvas(canvasElement,analyserNodeRef){
 	audioData = new Uint8Array(analyserNode.fftSize/2);
 }
 
-function draw(params={}){
-  // 1 - populate the audioData array with the frequency data from the analyserNode
-	// notice these arrays are passed "by reference" 
+function draw(params={}, note = [], pitchArray = [], activeNote = 0){
 	analyserNode.getByteFrequencyData(audioData);
-	// OR
-	//analyserNode.getByteTimeDomainData(audioData); // waveform data
 	
 	// 2 - draw background
     ctx.save();
     ctx.fillStyle = "black";
     ctx.globalAlpha = .1;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-	ctx.restore();
+    ctx.restore();
+    
 	// 3 - draw gradient
 	if(params.showGradient){
         ctx.save();
@@ -45,6 +33,7 @@ function draw(params={}){
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
         ctx.restore();
     }
+
 	// 4 - draw bars
 	if(params.showBars){
         let barSpacing = 4;
@@ -52,38 +41,20 @@ function draw(params={}){
         let screenWidthForBars = canvasWidth - (params.numBars * barSpacing) - margin * 2;
         let barWidth = screenWidthForBars / params.numBars;
         let barHeight = 300;
-        let topSpacing = 120;
-
-        /*
-        //Math params
-        let targetFreq = 261.63; //Frequency of middle C
-        let halfStepMultiplier = Math.pow(2, 1/12); //How much you multiple C by to get the frequency of C#, C# to get D, etc. Multiply by it twice to get full steps (E to F).
-        let rate = 44100.0; //Sampling rate
-        let sampleRange = rate / audioData.length; //How many Hz one sample uses.
-        */
-
-        let multiplier = 1.0;
-
+        let multiplier = 1.0; //Used to make bars shoot up high enough.
+        topSpacing = 120;
+        
         ctx.save();
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.strokeStyle = 'rgba(0,0,0,0.5)';
         for(let i = 0; i < params.numBars; i++){
-            /*
-            ctx.fillRect(margin + i * (barWidth + barSpacing), topSpacing + 256 - audioData[Math.floor(targetFreq / sampleRange) + 8], barWidth, barHeight);
-            ctx.strokeRect(margin + i * (barWidth + barSpacing), topSpacing + 256 - audioData[Math.floor(targetFreq / sampleRange) + 8], barWidth, barHeight);
-            targetFreq *= halfStepMultiplier; //Step up a half step.
-            if(i == 4) //Catch the case of E to F, since there is no E sharp.
-            {
-                targetFreq *= halfStepMultiplier;
-            }
-            */
-            switch(Math.abs(params.activeNote - i))
+            switch(Math.abs(params.activeNote - i)) //Apply multiplier.
             {
                 case 0:
-                    multiplier = 1.25;
-                    if(i > 6 || i < 2)
+                    multiplier = 1.5;
+                    if(i > 5 || i < 4)
                     {
-                        multiplier *= 2;
+                        multiplier *= 2.5;
                     }
                     break;
                 case 1:
@@ -96,11 +67,28 @@ function draw(params={}){
                     multiplier = 0.0;
                     break;
             }
+            //Draw bar.
             ctx.fillRect(margin + i * (barWidth + barSpacing), topSpacing + 256 - (.6 * Math.min((audioData[40 + i * 3] * multiplier), 256)), barWidth, barHeight);
             ctx.strokeRect(margin + i * (barWidth + barSpacing), topSpacing + 256 - (.6 * Math.min((audioData[40 + i * 3] * multiplier), 256)), barWidth, barHeight);
+            //Check note collisons.
+            for(let a = 0; a < note.length; a++)
+            {
+                if(i == pitchArray[activeNote + a])
+                {
+                    note[a].checkCollision(topSpacing + 256 - (.6 * Math.min((audioData[40 + i * 3] * multiplier), 256)));
+                }
+            }
         }
         ctx.restore();
+        //Draw note line
+        ctx.save();
+        ctx.moveTo(0, topSpacing + 256 * 2 / 5);
+        ctx.lineTo(canvasWidth, topSpacing + 256 * 2 / 5);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
     }
+
 	// 5 - draw circles
 	if(params.showCircles){
         let maxRadius = canvasHeight / 4;
@@ -133,15 +121,8 @@ function draw(params={}){
         }
         ctx.restore();
     }
-    // 6 - bitmap manipulation
-	// TODO: right now. we are looping though every pixel of the canvas (320,000 of them!), 
-	// regardless of whether or not we are applying a pixel effect
-	// At some point, refactor this code so that we are looping though the image data only if
-	// it is necessary
 
-	// A) grab all of the pixels on the canvas and put them in the `data` array
-	// `imageData.data` is a `Uint8ClampedArray()` typed array that has 1.28 million elements!
-	// the variable `data` below is a reference to that array 
+    // 6 - bitmap manipulation
     let imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
     let data = imageData.data;
     let length = data.length;
@@ -173,9 +154,20 @@ function draw(params={}){
             data[a] = 127 + 2*data[a] - data[a + 4] - data[a + width * 4];
         }
     }
-    
     // D) copy image data back to canvas
     ctx.putImageData(imageData, 0, 0);
 }
 
-export {setupCanvas,draw};
+function drawBezier(nextNotePitch, currentNotePitch) //Draws 'bouncy' bezier curves.
+{
+    let top = utils.getRandom(-200, 200);
+    let middle = 5 + 62 * (currentNotePitch + 1) + (4 * currentNotePitch) - 31 +
+        (((5 + 62 * (nextNotePitch + 1) + (4 * nextNotePitch) - 31) - (5 + 62 * (currentNotePitch + 1) + (4 * currentNotePitch) - 31)) / 2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(5 + 62 * (currentNotePitch + 1) + (4 * currentNotePitch) - 31, topSpacing + (256 * 2 / 5));
+    ctx.quadraticCurveTo(middle, top, (5 + 62 * (nextNotePitch + 1) + (4 * nextNotePitch) - 31), topSpacing + (256 * 2 / 5));
+    ctx.closePath();
+}
+
+export {setupCanvas,draw, drawBezier};
